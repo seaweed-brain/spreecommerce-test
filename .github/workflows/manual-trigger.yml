@@ -1,11 +1,9 @@
 name: Manual trigger
 on:
-  push:
-    branches: [ main, master ]
   workflow_dispatch:
     inputs:
         input_product:
-          description: 'Product you want to order. Enter exact product name.'
+          description: 'Product you want to order. Enter exact product name, else, test will fail'
           required: true
           default: 'Digital Air Fryer 4.2L'
           type: string
@@ -25,7 +23,7 @@ jobs:
       run: npx playwright install --with-deps
     - name: Run Playwright tests
       env:
-        product_name: ${{ github.event.inputs.input_product }}
+        product_name: ${{ inputs.input_product }}
       run: npx playwright test
     - uses: actions/upload-artifact@v4
       if: ${{ !cancelled() }}

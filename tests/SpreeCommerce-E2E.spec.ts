@@ -17,6 +17,7 @@ test('Spree Commerce E2E Test', async ({ page }) => {
     if (process.env.product_name === undefined) return "Digital Air Fryer 4.2L";
     return process.env.product_name;
   })();
+  console.log("Using product: "+productName);
   const shippingCountry = 'United States';
   const shippingCompany = 'Globe Telecom';
   const shippingAddress = '123 Test St.';
