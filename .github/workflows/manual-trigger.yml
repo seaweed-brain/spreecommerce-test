@@ -3,12 +3,12 @@ on:
   push:
     branches: [ main, master ]
   workflow_dispatch:
-  inputs:
-      input_product:
-        description: 'Product you want to order. Enter exact product name.'
-        required: true
-        default: 'Digital Air Fryer 4.2L'
-        type: string
+    inputs:
+        input_product:
+          description: 'Product you want to order. Enter exact product name.'
+          required: true
+          default: 'Digital Air Fryer 4.2L'
+          type: string
       
 jobs:
   test:
