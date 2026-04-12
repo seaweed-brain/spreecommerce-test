@@ -17,7 +17,6 @@ test('Spree Commerce E2E Test', async ({ page }) => {
     if (process.env.product_name === undefined) return "Digital Air Fryer 4.2L";
     return process.env.product_name;
   })();
-  console.log("Using product: "+productName);
   const shippingCountry = 'United States';
   const shippingCompany = 'Globe Telecom';
   const shippingAddress = '123 Test St.';
@@ -68,12 +67,18 @@ test('Spree Commerce E2E Test', async ({ page }) => {
   await page.getByRole('combobox', { name: 'Search...' }).fill(productName);
   await page.getByRole('combobox', { name: 'Search...' }).press('Enter');
   await page.waitForURL(url+'products?q=**')
-  const productIsVisible = await page.getByRole('link', { name: productName }).isVisible();
-  if (productIsVisible === true) {
+  try {
+    await expect(page.getByRole('link', { name: productName })).toBeVisible();
     await page.getByRole('link', { name: productName }).hover();
     await page.getByRole('link', { name: productName }).click();
   }
-  else {throw new Error("Product not found or unavailable. Please use a different product.");}
+  catch {throw new Error("Product not found or unavailable. Please use a different product.");}
+  // const productIsVisible = await page.getByRole('link', { name: productName }).isVisible();
+  // if (productIsVisible === true) {
+  //   await page.getByRole('link', { name: productName }).hover();
+  //   await page.getByRole('link', { name: productName }).click();
+  // }
+  // else {throw new Error("Product not found or unavailable. Please use a different product.");}
   
   
   // Add the product to your cart
