@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 
 // E2E Test for Spree Commerce
 test('Spree Commerce E2E Test', async ({ page }) => {
-  test.setTimeout(120000);
+  test.setTimeout(60000);
 
   // Test Data
   const url = 'https://demo.spreecommerce.org/us/en/';
@@ -41,8 +41,13 @@ test('Spree Commerce E2E Test', async ({ page }) => {
   await page.getByRole('link', { name: 'Account', exact: true }).click();
   await page.waitForURL(url+'account')
   await expect(page.getByRole('main').getByText('My Account')).toBeVisible();
-  await page.getByRole('link', { name: 'Sign up',  exact: true  }, ).click();
-  await page.waitForURL(url+'account/register')
+  const signUpButton = page.getByRole('link', { name: 'Sign up',  exact: true  });
+  await expect(signUpButton).toBeVisible();
+  await expect(signUpButton).toBeEnabled();
+  await Promise.all([
+  page.waitForURL(url+'account/register'),
+  signUpButton.click(),
+  ]);
   await expect(page.getByRole('main').getByText('Create Account').first()).toBeVisible();
   await page.getByRole('textbox', { name: 'First name' }).fill(firstName);
   await page.getByRole('textbox', { name: 'Last name' }).fill(lastName);
@@ -65,7 +70,7 @@ test('Spree Commerce E2E Test', async ({ page }) => {
   await page.getByRole('textbox', { name: 'Password' }).fill(password);
   await page.getByRole('button', { name: 'Sign In' }).click();
   
-  // Browse for the item and open
+  // Browse for the product and open
   await page.getByRole('button', { name: 'Open search' }).click();
   await page.getByRole('combobox', { name: 'Search...' }).fill(productName);
   await page.getByRole('combobox', { name: 'Search...' }).press('Enter');
@@ -76,12 +81,6 @@ test('Spree Commerce E2E Test', async ({ page }) => {
     await page.getByRole('link', { name: productName }).click();
   }
   catch {throw new Error("Product not found or unavailable. Please use a different product.");}
-  // const productIsVisible = await page.getByRole('link', { name: productName }).isVisible();
-  // if (productIsVisible === true) {
-  //   await page.getByRole('link', { name: productName }).hover();
-  //   await page.getByRole('link', { name: productName }).click();
-  // }
-  // else {throw new Error("Product not found or unavailable. Please use a different product.");}
   
   
   // Add the product to your cart
@@ -97,9 +96,9 @@ test('Spree Commerce E2E Test', async ({ page }) => {
 
   // Checkout Order
   await page.getByRole('link', { name: 'Proceed to Checkout' }).click();
-  // Populate Shipping Address
   await page.waitForURL(url+'checkout/**');
   await expect(page.getByRole('heading', { name: 'Shipping Address' })).toBeVisible();
+  // Populate Shipping Address
   await page.getByLabel('Country').selectOption(shippingCountry);
   await page.getByRole('textbox', { name: 'Company (optional)' }).fill(shippingCompany);
   await page.getByRole('textbox', { name: 'Address', exact: true }).fill(shippingAddress);
@@ -110,11 +109,16 @@ test('Spree Commerce E2E Test', async ({ page }) => {
   await page.getByRole('textbox', { name: 'Phone (optional)' }).fill(shippingPhone);
   await page.getByRole('heading', { name: 'Shipping Address' }).click();
   // Select Shipping Method
-  if (shippingMethod.toLowerCase() === 'standard') {
-    await page.getByRole('radio', { name: 'Standard $' }).click(); }
-  else if (shippingMethod.toLowerCase() === 'premium') {
-     await page.getByRole('radio', { name: 'Premium $' }).click(); }
-  else {throw new Error("Invalid Shipping Method input!"); }
+  const shippingOption = shippingMethod.toLowerCase() === 'standard'
+    ? page.getByRole('radio', { name: /Standard \$/i })
+    : shippingMethod.toLowerCase() === 'premium'
+      ? page.getByRole('radio', { name: /Premium \$/i })
+      : null;
+  if (!shippingOption) throw new Error('Invalid Shipping Method input!');
+    await shippingOption.scrollIntoViewIfNeeded();
+    await expect(shippingOption).toBeVisible();
+    await shippingOption.check();
+    await expect(shippingOption).toBeChecked();
   // Populate Payment Method
   const paymentMethodFrame = page.locator('iframe[title="Secure payment input frame"]').first().contentFrame();
   if (paymentMode.toLowerCase() === 'card') {
@@ -124,8 +128,8 @@ test('Spree Commerce E2E Test', async ({ page }) => {
     await paymentMethodFrame.getByRole('textbox', { name: 'Security code' }).fill(paymentSecurityCode); 
     await paymentMethodFrame.getByLabel('Country', { exact: true }).selectOption(paymentCountry); 
     await paymentMethodFrame.getByLabel('Zip Code').fill(paymentZipCode); 
-    // await page.locator('(//select[@id="payment-countryInput"])').selectOption(paymentCountry); 
-    // await page.locator('(//input[@id="payment-postalCodeInput"])').fill(paymentZipCode); 
+    await expect(paymentMethodFrame.getByLabel('Zip Code')).toHaveValue(paymentZipCode);
+    await paymentMethodFrame.getByLabel('Zip Code').press('Tab');
   }
   else if (paymentMode.toLowerCase() === 'affirm') {
     await paymentMethodFrame.getByTestId('affirm').click(); 
@@ -137,13 +141,18 @@ test('Spree Commerce E2E Test', async ({ page }) => {
     await paymentMethodFrame.getByTestId('cashapp').click(); 
     throw new Error("Selected Payment Method Out of Scope for now, use 'Card' only "); }
   else {throw new Error("Invalid Payment Mode input!"); }
-
-  await page.getByRole('button', { name: 'Pay Now' }).click(); 
   
+  const payNowButton = page.getByRole('button', { name: 'Pay Now' });
+  await expect(payNowButton).toBeVisible();
+  await expect(payNowButton).toBeEnabled();
+  await Promise.all([
+  page.waitForURL(url+'order-placed/**', { waitUntil: 'domcontentloaded' }),
+  payNowButton.click(),
+  ]);
+
   // Verify confirmation
-  await page.waitForURL(url+'order-placed/**', {waitUntil: 'domcontentloaded'});
   await expect(page.locator('//h1[contains(text(),\'Thanks for your order\')]')).toBeVisible();
   const orderNumber = await page.locator('//p[@class="text-gray-500" and contains(text(),\'Order #\')]').textContent();
-  console.log("Order #: " + orderNumber?.substring(7))
+  console.log('Order #: ' + orderNumber?.replace('Order #', '').trim());
   
 });
