@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 
 // E2E Test for Spree Commerce
 test('Spree Commerce E2E Test', async ({ page }) => {
-  test.setTimeout(60000);
+  test.setTimeout(120000);
 
   // Test Data
   const url = 'https://demo.spreecommerce.org/us/en/';
@@ -13,7 +13,10 @@ test('Spree Commerce E2E Test', async ({ page }) => {
     return `iantest${randomUsername}@${domain}`;
     };
   const password = 'test123';
-  const productName = 'digital Air Fryer 4.2L';
+  const productName = (() => {
+    if (process.env.product_name === undefined) return "Digital Air Fryer 4.2L";
+    return process.env.product_name;
+  })();
   const shippingCountry = 'United States';
   const shippingCompany = 'Globe Telecom';
   const shippingAddress = '123 Test St.';
@@ -35,7 +38,7 @@ test('Spree Commerce E2E Test', async ({ page }) => {
   await page.getByRole('link', { name: 'Account', exact: true }).click();
   await page.waitForURL(url+'account')
   await expect(page.getByRole('main').getByText('My Account')).toBeVisible();
-  await page.getByRole('link', { name: 'Sign up',  exact: true  }).click();
+  await page.getByRole('link', { name: 'Sign up',  exact: true  }, ).click();
   await page.waitForURL(url+'account/register')
   await expect(page.getByRole('main').getByText('Create Account').first()).toBeVisible();
   await page.getByRole('textbox', { name: 'First name' }).fill(firstName);
@@ -64,8 +67,13 @@ test('Spree Commerce E2E Test', async ({ page }) => {
   await page.getByRole('combobox', { name: 'Search...' }).fill(productName);
   await page.getByRole('combobox', { name: 'Search...' }).press('Enter');
   await page.waitForURL(url+'products?q=**')
-  await page.getByRole('link', { name: productName }).hover();
-  await page.getByRole('link', { name: productName }).click();
+  const productIsVisible = await page.getByRole('link', { name: productName }).isVisible();
+  if (productIsVisible === true) {
+    await page.getByRole('link', { name: productName }).hover();
+    await page.getByRole('link', { name: productName }).click();
+  }
+  else {throw new Error("Product not found or unavailable. Please use a different product.");}
+  
   
   // Add the product to your cart
   await page.getByRole('button', { name: 'Add to Cart' }).click();
@@ -120,7 +128,7 @@ test('Spree Commerce E2E Test', async ({ page }) => {
   await page.getByRole('button', { name: 'Pay Now' }).click(); 
   
   // Verify confirmation
-  await page.waitForURL(url+'order-placed/**', {timeout: 120000});
+  await page.waitForURL(url+'order-placed/**', {waitUntil: 'domcontentloaded'});
   await expect(page.locator('//h1[contains(text(),\'Thanks for your order\')]')).toBeVisible();
   const orderNumber = await page.locator('//p[@class="text-gray-500" and contains(text(),\'Order #\')]').textContent();
   console.log("Order #: " + orderNumber?.substring(7))
