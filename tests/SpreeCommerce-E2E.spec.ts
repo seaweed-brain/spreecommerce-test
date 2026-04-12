@@ -30,6 +30,9 @@ test('Spree Commerce E2E Test', async ({ page }) => {
   const paymentCardNumber = '4242 4242 4242 4242';
   const paymentExpDate = '04/30';
   const paymentSecurityCode = '333';
+  const paymentCountry = 'United States';
+  const paymentZipCode = '20166';
+
 
   // Go to Spree Commerce website
   await page.goto(url);
@@ -119,6 +122,10 @@ test('Spree Commerce E2E Test', async ({ page }) => {
     await paymentMethodFrame.getByRole('textbox', { name: 'Card number' }).fill(paymentCardNumber); 
     await paymentMethodFrame.getByRole('textbox', { name: 'Expiration date MM / YY' }).fill(paymentExpDate); 
     await paymentMethodFrame.getByRole('textbox', { name: 'Security code' }).fill(paymentSecurityCode); 
+    await paymentMethodFrame.getByLabel('Country', { exact: true }).selectOption(paymentCountry); 
+    await paymentMethodFrame.getByLabel('Zip Code').fill(paymentZipCode); 
+    // await page.locator('(//select[@id="payment-countryInput"])').selectOption(paymentCountry); 
+    // await page.locator('(//input[@id="payment-postalCodeInput"])').fill(paymentZipCode); 
   }
   else if (paymentMode.toLowerCase() === 'affirm') {
     await paymentMethodFrame.getByTestId('affirm').click(); 
