@@ -1,0 +1,49 @@
+name: Smoke Test
+on:
+  workflow_dispatch:
+    inputs:
+        blogTitle:
+          description: 'Your blog title'
+          required: false
+          type: string
+        blogSummary:
+          description: 'Your blog summary'
+          required: false
+          type: string
+        blogContent:
+          description: 'Your blog content'
+          required: false
+          type: string
+        blogImage:
+          description: 'Your blog image. (Input filename with extension from the uploadables folder)'
+          required: false
+          type: string
+      
+jobs:
+  test:
+    timeout-minutes: 60
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-node@v4
+      with:
+        node-version: lts/*
+    - name: Install dependencies
+      run: npm ci
+    - name: Install Playwright Browsers
+      run: npx playwright install --with-deps
+    - name: Run Playwright tests
+      env:
+        input_blogTitle: ${{ inputs.blogTitle }}
+        input_blogSummary: ${{ inputs.blogSummary }}
+        input_blogContent: ${{ inputs.blogContent }}
+        input_blogImage: ${{ inputs.blogImage }}
+      run: npx playwright test
+    - uses: actions/upload-artifact@v4
+      if: ${{ !cancelled() }}
+      with:
+        name: playwright-report
+        path: playwright-report/
+        retention-days: 30
+
+    
